@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {check, validationResult} = require("express-validator");
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
 router.get("/", (req, res) => {
@@ -30,10 +31,15 @@ router.post("/",
             user = new User({
                 name, email, password
             });
-            // user.save();
+            // HASH THE PASSWORD    
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+            // save to DB
+            user.save();
             res.send("Users created.");
         } catch (error) {
             console.log(error);
+            res.status(500).send("Server error");
         }
         
 });
