@@ -1,8 +1,70 @@
 const express = require("express");
 const router = express.Router();
+const { check, validationResult } = require("express-validator");
+const auth = require("../middleware/authorization");
+const Product = require("../models/Product");
 
-router.get("/", (req, res) => {
-    res.send("Products route.");
+router.post(
+    "/",
+    [
+        auth,
+        [
+            check("name", "Name is required").not().isEmpty(),
+            check("description", "description is required").not().isEmpty(),
+            check("category", "category is required").not().isEmpty(),
+            check("price", "price is required").not().isEmpty(),
+            check("quantity", "quantity is required").not().isEmpty(),
+        ],
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+        try {
+            const { name, description, category, price, brand, quantity } =
+                req.body;
+            const newProduct = new Product({
+                userId: req.user.id,
+                name,
+                description,
+                category,
+                price,
+                brand,
+                quantity,
+            });
+            const product = await newProduct.save();
+            res.json({ product });
+        } catch (error) {
+            console.log(error);
+            res.status(500).send("Server error");
+        }
+    }
+);
+
+// get all products
+router.get("/", async (req, res) => {
+    try {
+        const products = await Product.find();
+        res.json(products);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("Server error");
+    }
+});
+
+router.get("/:id", async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ msg: "Product was not found." });
+        }
+
+        res.json(product);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("Server error");
+    }
 });
 
 module.exports = router;
